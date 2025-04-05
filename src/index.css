@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 207 90% 54%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
+    --secondary: 187 100% 42%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 187 100% 42%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,32 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .car-gauge {
+    @apply relative w-40 h-40 rounded-full bg-muted flex items-center justify-center overflow-hidden;
+  }
+  
+  .car-gauge-indicator {
+    @apply absolute bottom-0 left-0 right-0 rounded-t-full transform-origin-bottom transition-all duration-1000 ease-out;
+  }
+  
+  .car-gauge-text {
+    @apply relative z-10 font-bold text-2xl;
+  }
+  
+  .dropzone {
+    @apply border-2 border-dashed rounded-lg p-8 transition-all duration-300 ease-in-out;
+  }
+  
+  .dropzone-active {
+    @apply border-car-blue bg-blue-50;
+  }
+  
+  .image-annotation {
+    @apply absolute rounded-full bg-car-red bg-opacity-60 border border-white shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all hover:scale-110;
   }
 }
