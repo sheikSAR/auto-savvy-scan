@@ -101,7 +101,7 @@
   }
   
   .car-gauge-indicator {
-    @apply absolute bottom-0 left-0 right-0 rounded-t-full transform-origin-bottom transition-all duration-1000 ease-out;
+    @apply absolute bottom-0 left-0 right-0 rounded-t-full origin-bottom transition-all duration-1000 ease-out;
   }
   
   .car-gauge-text {
