@@ -14,7 +14,7 @@ export type Defect = {
   imageId: string;
 };
 
-type Damage = {
+export type Damage = {
   damage: number;
   description: string;
   type: 'minor' | 'major';

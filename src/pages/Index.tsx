@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageUpload, { UploadedImage } from '@/components/ImageUpload';
 import CarForm, { CarFormData } from '@/components/CarForm';
-import ConditionAnalysis, { AnalysisResult, FullAnalysisResult } from '@/components/ConditionAnalysis';
+import ConditionAnalysis, { AnalysisResult, FullAnalysisResult, Damage } from '@/components/ConditionAnalysis';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Car, Database, ShieldCheck, Gauge, DollarSign } from 'lucide-react';
@@ -27,7 +26,7 @@ const mockAnalysisResult: AnalysisResult = {
       severity: 'medium',
       description: 'Medium-sized dent on the rear bumper',
       position: { x: 0.65, y: 0.75 },
-      imageId: 'img1', // This should match the id of the uploaded image
+      imageId: 'img1',
     },
     {
       id: '2',
@@ -102,7 +101,9 @@ const Index: React.FC = () => {
           // Construct defects from damage data
           const defects = [];
           if (response.data.damages) {
-            Object.entries(response.data.damages).forEach(([type, damage]) => {
+            Object.entries(response.data.damages).forEach(([type, damageObj]) => {
+              // Type assertion to ensure TypeScript knows this is a Damage type
+              const damage = damageObj as Damage | undefined;
               if (damage) {
                 damage.coordinates.forEach((coord, index) => {
                   const centerX = (coord.x1 + coord.x2) / 2 / 100;
