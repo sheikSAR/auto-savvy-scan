@@ -1,7 +1,6 @@
-
-import React from 'react';
-import { DollarSign } from 'lucide-react';
-import { formatCurrency } from '@/utils/analysisUtils';
+import React from "react";
+import { DollarSign } from "lucide-react";
+import { formatCurrency, getRecommendedPrice } from "@/utils/analysisUtils";
 
 type PricingRangeProps = {
   marketValueRange: {
@@ -16,17 +15,30 @@ const PricingRange: React.FC<PricingRangeProps> = ({
   marketValueRange,
   recommendedPrice,
 }) => {
-  const getPercentPosition = () => {
-    if (typeof recommendedPrice === 'string' || 
-        typeof marketValueRange.low === 'string' || 
-        typeof marketValueRange.high === 'string') {
-      return 50; // Default to middle if string
-    }
-    
-    return ((recommendedPrice - marketValueRange.low) / 
-      (marketValueRange.high - marketValueRange.low)) * 100;
+  const removeFormat = (str) => {
+    return parseInt(
+      String(str).replace(new RegExp(",", "g"), "").replace("₹", "")
+    );
   };
-  
+  const getPercentage = (x, a, b, c) =>
+    x <= a
+      ? 0
+      : x >= c
+      ? 100
+      : x <= b
+      ? ((x - a) / (b - a)) * 50
+      : 50 + ((x - b) / (c - b)) * 50;
+
+  const getPercentPosition = () => {
+    // return recommend price position
+    let rprice = removeFormat(recommendedPrice);
+    let low = removeFormat(marketValueRange.low);
+    let average = removeFormat(marketValueRange.average);
+    let high = removeFormat(marketValueRange.high);
+    const res = getPercentage(rprice, low, average, high);
+    return Math.floor(res);
+  };
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-md border">
       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -42,7 +54,7 @@ const PricingRange: React.FC<PricingRangeProps> = ({
           className="absolute w-5 h-10 bg-black transform -translate-x-1/2 rounded-full border-2 border-white shadow-lg"
           style={{
             left: `${getPercentPosition()}%`,
-            top: '0',
+            top: "0",
           }}
         />
       </div>

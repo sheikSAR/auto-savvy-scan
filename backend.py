@@ -3,14 +3,22 @@ from flask_cors import CORS
 import base64
 from io import BytesIO
 from PIL import Image
-from openai import OpenAI
 import json
 import re
+import requests, os
+from ultralytics import YOLO
+import cv2
+import numpy as np
+
+model = YOLO(r"C:\xampp\htdocs\clg-projects\kare-v-analyser\datasets\runs\detect\train7\weights\best.pt")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
-client = OpenAI(api_key="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")
+def generate_text_from_uploaded(encoded_image, prompt="Describe this image", model="granite:3.2-vision"):
+    res = requests.post("http://localhost:11434/api/generate", json={"model": model, "prompt": prompt, "images": [encoded_image]})
+    if res.status_code != 200: raise Exception(f"Ollama error {res.status_code}: {res.text}")
+    return ''.join(eval(line.decode()).get("response", "") for line in res.iter_lines() if line).strip()
 
 def parse_json_from_response(text):
     return json.loads(re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL).group(1))
@@ -55,20 +63,7 @@ def identify_car_details():
     """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt_text},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}},
-                    ],
-                }
-            ],
-            max_tokens=1000,
-        )
-
+        response = generate_text_from_uploaded(encoded_image, prompt_text)
         message = response.choices[0].message.content.strip()
         json1 = parse_json_from_response(message)
         return jsonify({"status": "success", "data": json1})
@@ -91,6 +86,31 @@ def identify_image():
     kilometers = request.form.get("kilometers")
     fuel_type = request.form.get("fuel_type")
     number_plate = request.form.get("number_plate")
+    npimg = np.frombuffer(file, np.uint8)
+    image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+
+    # Run inference
+    results = model(image)[0]
+
+    # Collect detection results
+    detections = []
+    for box in results.boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        conf = float(box.conf[0])
+        cls_id = int(box.cls[0])
+        label = model.names[cls_id]
+
+        detections.append({
+            "label": label,
+            "confidence": round(conf, 4),
+            "box": {
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2
+            }
+        })
+
     json_req = """
     {
                 "damages": {
@@ -115,10 +135,10 @@ def identify_image():
                         "repair_cost": "accurate Indian INR range with indian formatting",
                         "coordinates": [
                             {
-                                "x1": int(0 to 100) => accurate starting point of the dent box,
-                                "y1": int(0 to 100) => accurate starting point of the dent box,
-                                "x2": int(0 to 100) => accurate ending point of the dent,
-                                "y2": int(0 to 100) => accurate ending point of the dent,
+                                "x1": int(0 to 100) => accurate starting point of the scratch box,
+                                "y1": int(0 to 100) => accurate starting point of the scratch box,
+                                "x2": int(0 to 100) => accurate ending point of the scratch,
+                                "y2": int(0 to 100) => accurate ending point of the scratch,
                             }
                         ]
                     },
@@ -129,10 +149,10 @@ def identify_image():
                         "repair_cost": "accurate Indian INR range with indian formatting",
                         "coordinates": [
                            {
-                                "x1": int(0 to 100) => accurate starting point of the dent box,
-                                "y1": int(0 to 100) => accurate starting point of the dent box,
-                                "x2": int(0 to 100) => accurate ending point of the dent,
-                                "y2": int(0 to 100) => accurate ending point of the dent,
+                                "x1": int(0 to 100) => accurate starting point of the headlight box,
+                                "y1": int(0 to 100) => accurate starting point of the headlight box,
+                                "x2": int(0 to 100) => accurate ending point of the headlight,
+                                "y2": int(0 to 100) => accurate ending point of the headlight,
                             }
                         ]
                     }
@@ -193,20 +213,7 @@ def identify_image():
             """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt_text},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}},
-                    ],
-                }
-            ],
-            max_tokens=1000,
-        )
-
+        response = generate_text_from_uploaded(encoded_image, prompt_text)
         message = response.choices[0].message.content.strip()
         json1 = parse_json_from_response(message)
         return jsonify({"status": "success", "data": json1})
