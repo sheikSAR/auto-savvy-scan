@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Upload, X, ImagePlus, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
+  const carDetailsCallbackRef = useRef(onCarDetailsDetected);
+  
+  // Update ref when prop changes
+  useEffect(() => {
+    carDetailsCallbackRef.current = onCarDetailsDetected;
+  }, [onCarDetailsDetected]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -79,29 +85,39 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const updatedImages = [...images, ...validFiles];
       setImages(updatedImages);
       
-      // If this is the first image, try to detect car details
-      if (images.length === 0 && onCarDetailsDetected) {
-        try {
-          simulateUpload(validFiles, async (uploadedImage) => {
+      // If this is the first image, prepare to detect car details after upload finishes
+      if (images.length === 0) {
+        simulateUpload(validFiles, (uploadedImage) => {
+          // Only process the API call if the callback is still valid 
+          if (carDetailsCallbackRef.current) {
             // Call the backend API to detect car details
-            const response = await uploadImageForCarDetails(uploadedImage.file);
-            if (response.status === 'success' && response.data) {
-              onCarDetailsDetected(response.data);
-              toast({
-                title: "Car details detected",
-                description: "We've automatically filled some car details based on the image.",
-              });
-            }
-          });
-        } catch (error) {
-          console.error('Error detecting car details:', error);
-          simulateUpload(validFiles);
-        }
+            detectCarDetails(uploadedImage.file);
+          }
+        });
       } else {
         simulateUpload(validFiles);
       }
     }
-  }, [images, toast, onCarDetailsDetected]);
+  }, [images, toast]);
+
+  // Separate function to detect car details to avoid React state updates during render
+  const detectCarDetails = async (file: File) => {
+    try {
+      const response = await uploadImageForCarDetails(file);
+      if (response.status === 'success' && response.data) {
+        // Use the ref callback to avoid state updates during rendering
+        if (carDetailsCallbackRef.current) {
+          carDetailsCallbackRef.current(response.data);
+          toast({
+            title: "Car details detected",
+            description: "We've automatically filled some car details based on the image.",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting car details:', error);
+    }
+  };
 
   const simulateUpload = (newImages: UploadedImage[], onComplete?: (image: UploadedImage) => void) => {
     const updatedImages = [...images];
