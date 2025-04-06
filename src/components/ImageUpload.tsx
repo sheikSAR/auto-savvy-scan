@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Upload, X, ImagePlus, AlertCircle } from 'lucide-react';
+import { Upload, X, ImagePlus, AlertCircle, Car, FileWarning, Clipboard } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,13 +27,28 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const { toast } = useToast();
   const carDetailsCallbackRef = useRef(onCarDetailsDetected);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
   
   // Update ref when prop changes
   useEffect(() => {
     carDetailsCallbackRef.current = onCarDetailsDetected;
   }, [onCarDetailsDetected]);
+
+  // Setup clipboard paste event listener
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        e.preventDefault();
+        processFiles(e.clipboardData.files);
+      }
+    };
+    
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -52,32 +67,72 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     e.stopPropagation();
   }, []);
 
+  // Fake vehicle detection for demo purposes
+  // In a real app, this would use machine learning to identify vehicles
+  const isVehicleImage = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // For demo: Randomly reject some images to show the functionality
+      // This would be replaced with actual vehicle detection logic
+      const isMockVehicle = Math.random() > 0.2; // 80% chance of being a vehicle
+      
+      // Simulate API call delay
+      setTimeout(() => {
+        resolve(isMockVehicle);
+      }, 500);
+    });
+  };
+
   const processFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
 
     const validFiles: UploadedImage[] = [];
-    const invalidFiles: string[] = [];
+    const invalidFileTypes: string[] = [];
+    const invalidVehicles: string[] = [];
 
-    Array.from(files).forEach((file) => {
+    // Process each file
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file type
       if (file.type.startsWith('image/')) {
-        const newImage = {
-          id: Math.random().toString(36).substring(2, 9),
-          file,
-          preview: URL.createObjectURL(file),
-          uploading: true,
-          progress: 0,
-        };
-        validFiles.push(newImage);
+        // Check if it's a vehicle image
+        const isVehicle = await isVehicleImage(file);
+        
+        if (isVehicle) {
+          const newImage = {
+            id: Math.random().toString(36).substring(2, 9),
+            file,
+            preview: URL.createObjectURL(file),
+            uploading: true,
+            progress: 0,
+          };
+          validFiles.push(newImage);
+        } else {
+          invalidVehicles.push(file.name);
+          // Trigger rejection animation
+          setIsRejecting(true);
+          setTimeout(() => setIsRejecting(false), 820);
+        }
       } else {
-        invalidFiles.push(file.name);
+        invalidFileTypes.push(file.name);
       }
-    });
+    }
 
-    if (invalidFiles.length > 0) {
+    // Show error messages
+    if (invalidFileTypes.length > 0) {
       toast({
         variant: "destructive",
         title: "Invalid file type",
-        description: `${invalidFiles.join(', ')} ${invalidFiles.length > 1 ? 'are' : 'is'} not an image file.`,
+        description: `${invalidFileTypes.join(', ')} ${invalidFileTypes.length > 1 ? 'are' : 'is'} not an image file.`,
+      });
+    }
+    
+    if (invalidVehicles.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Not a vehicle image",
+        description: `Only vehicle images are allowed. ${invalidVehicles.join(', ')} ${invalidVehicles.length > 1 ? 'do' : 'does'} not appear to contain a vehicle.`,
+        icon: <FileWarning className="h-5 w-5" />
       });
     }
 
@@ -187,30 +242,62 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   return (
     <div className="space-y-6">
       <div
-        className={`dropzone ${isDragging ? 'dropzone-active' : 'border-gray-300 hover:border-gray-400'}`}
+        ref={dropzoneRef}
+        className={`
+          dropzone 
+          ${isDragging ? 'border-car-blue dark:border-car-blue border-2 bg-car-blue/5' : 'border-dashed border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'}
+          ${isRejecting ? 'animate-shake' : ''}
+          transition-all duration-200 rounded-xl p-8`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center justify-center text-center">
-          <Upload className="w-12 h-12 text-car-blue mb-2" />
-          <h3 className="text-lg font-medium mb-1">Drag & drop your car images here</h3>
-          <p className="text-sm text-gray-500 mb-4">or click to browse from your device</p>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            id="image-upload"
-            onChange={handleFileInputChange}
-          />
-          <Button asChild className="bg-car-blue hover:bg-car-blue/90">
-            <label htmlFor="image-upload" className="cursor-pointer">
-              <ImagePlus className="w-4 h-4 mr-2" />
-              Select Images
-            </label>
-          </Button>
+          <div className={`mb-4 rounded-full p-4 ${isDragging ? 'bg-car-blue/10 text-car-blue animate-pulse' : 'bg-gray-100 dark:bg-gray-800'} transition-colors duration-300`}>
+            {isDragging ? (
+              <Upload className="w-12 h-12 text-car-blue" />
+            ) : (
+              <Car className="w-12 h-12 text-car-blue" />
+            )}
+          </div>
+          
+          <h3 className="text-lg font-medium mb-1">
+            {isDragging 
+              ? "Drop your vehicle images here" 
+              : "Drag & Drop or Paste your vehicle image here"}
+          </h3>
+          
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            or click to browse from your device
+          </p>
+          
+          <div className="flex flex-wrap justify-center gap-3 mb-2">
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              id="image-upload"
+              onChange={handleFileInputChange}
+            />
+            
+            <Button asChild className="bg-car-blue hover:bg-car-blue/90">
+              <label htmlFor="image-upload" className="cursor-pointer">
+                <ImagePlus className="w-4 h-4 mr-2" />
+                Select Images
+              </label>
+            </Button>
+            
+            <Button variant="outline" className="flex items-center">
+              <Clipboard className="w-4 h-4 mr-2" />
+              Paste from clipboard
+            </Button>
+          </div>
+          
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
+            Supports: JPG, PNG, WebP • Max size: 10MB
+          </p>
         </div>
       </div>
 
@@ -218,7 +305,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {images.map((image) => (
             <Card key={image.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <div className="relative aspect-square bg-gray-100">
+              <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
                 <img
                   src={image.preview}
                   alt="Car upload preview"
@@ -226,7 +313,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 />
                 <button
                   onClick={() => removeImage(image.id)}
-                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center hover:bg-black/70 transition-colors"
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors"
                 >
                   <X className="w-4 h-4 text-white" />
                 </button>
