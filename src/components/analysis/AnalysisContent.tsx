@@ -45,16 +45,16 @@ const AnalysisContent: React.FC<AnalysisContentProps> = ({
         recommendedPrice={recommendedPrice}
       />
 
-      <Card className="shadow-xl border-t-4 border-t-car-blue bg-white overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 pb-4">
-          <CardTitle className="text-2xl text-car-blue flex items-center gap-2">
+      <Card className="glass-card shadow-xl border-t-4 border-t-car-blue overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 pb-4">
+          <CardTitle className="text-2xl bg-gradient-to-r from-car-blue to-teal-accent bg-clip-text text-transparent flex items-center gap-2">
             <Car className="h-6 w-6" /> Vehicle Condition Analysis
           </CardTitle>
         </CardHeader>
 
         <CardContent className="p-0">
           <Tabs defaultValue="visual" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
+            <TabsList className="grid w-full grid-cols-3 rounded-none border-b dark:border-gray-700">
               <TabsTrigger value="visual" className="font-medium">
                 Visual Analysis
               </TabsTrigger>
