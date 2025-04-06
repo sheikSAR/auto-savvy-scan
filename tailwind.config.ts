@@ -1,16 +1,14 @@
 
-import { Config } from "tailwindcss";
-import { fontFamily } from "tailwindcss/defaultTheme";
-import plugin from "tailwindcss/plugin";
+import type { Config } from "tailwindcss";
 
-const config: Config = {
+const config = {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
-  ],
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+	],
   theme: {
     container: {
       center: true,
@@ -20,12 +18,8 @@ const config: Config = {
       },
     },
     extend: {
-      borderWidth: {
-        '6': '6px',
-      },
       fontFamily: {
-        sans: ["Poppins", ...fontFamily.sans],
-        poppins: ["Poppins", ...fontFamily.sans],
+        poppins: ['Poppins', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -33,12 +27,11 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        "car-blue": "#1677FF", // Updated royal blue
-        "car-orange": "#FF8800", // Electric orange
-        "car-green": "#00C853", // Tech green
-        "car-red": "#ea384c",
-        "neon-green": "#39FF14",
-        "teal-accent": "#00BFA5",
+        'car-blue': 'hsl(var(--car-blue))',
+        'car-red': 'hsl(var(--car-red))',
+        'car-orange': 'hsl(var(--car-orange))',
+        'car-green': 'hsl(var(--car-green))',
+        'teal-accent': 'hsl(var(--teal-accent))',
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -67,105 +60,59 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      borderWidth: {
+        '6': '6px',
+      },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
+          from: { height: 0 },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        "fade-in": {
-          "0%": {
-            opacity: "0",
-            transform: "translateY(10px)"
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateY(0)"
-          }
-        },
-        "rotate-car": {
-          "0%": {
-            transform: "rotateY(0deg)"
-          },
-          "100%": {
-            transform: "rotateY(360deg)"
-          }
+          to: { height: 0 },
         },
         "float": {
-          "0%, 100%": {
-            transform: "translateY(0)"
-          },
-          "50%": {
-            transform: "translateY(-10px)"
-          }
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
         },
-        "pulse-ring": {
-          "0%": {
-            transform: "scale(0.8)",
-            opacity: "0.8"
-          },
-          "50%": {
-            opacity: "0.4"
-          },
-          "100%": {
-            transform: "scale(1.2)",
-            opacity: "0"
-          }
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-5px)" },
+          "40%, 80%": { transform: "translateX(5px)" },
         },
         "scan-line": {
-          "0%": {
-            top: "0%"
-          },
-          "100%": {
-            top: "100%"
-          }
+          "0%": { top: "0%" },
+          "100%": { top: "100%" },
+        },
+        "rotate-car": {
+          "0%": { transform: "rotateY(0deg)" },
+          "100%": { transform: "rotateY(360deg)" },
         }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.5s ease-out",
-        "rotate-car": "rotate-car 10s linear infinite",
-        "float": "float 3s ease-in-out infinite",
-        "pulse-ring": "pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite",
-        "scan-line": "scan-line 2s linear infinite"
+        "float": "float 6s ease-in-out infinite",
+        "shake": "shake 0.82s cubic-bezier(.36,.07,.19,.97) both",
+        "scan-line": "scan-line 2s linear infinite",
+        "rotate-car": "rotate-car 4s linear infinite",
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'tech-pattern': "url('/tech-pattern.svg')",
-        'hero-gradient': 'linear-gradient(90deg, #1677FF 0%, #00BFA5 100%)',
+      perspective: {
+        '1000': '1000px',
+      },
+      transformStyle: {
+        '3d': 'preserve-3d',
       },
     },
   },
-  plugins: [
-    require("tailwindcss-animate"),
-    plugin(({ addUtilities }) => {
-      addUtilities({
-        ".cursor-emoji": {
-          cursor: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🔍</text></svg>\") 5 5, auto",
-        },
-        ".glassmorphism": {
-          "@apply bg-white/10 backdrop-blur-md border border-white/20 shadow-lg": {},
-        },
-        ".dark-glassmorphism": {
-          "@apply bg-black/40 backdrop-blur-md border border-white/10 shadow-lg": {},
-        },
-      });
-    }),
-  ],
-};
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config
 
 export default config;

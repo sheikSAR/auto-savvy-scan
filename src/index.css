@@ -37,6 +37,10 @@
     --radius: 0.75rem;
 
     --car-blue: 217 100% 54%;
+    --car-red: 354 70% 54%;
+    --car-orange: 27 96% 61%;
+    --car-green: 142 72% 29%;
+    --teal-accent: 174 100% 29%;
   }
  
   .dark {
@@ -86,7 +90,7 @@
 
 @layer components {
   .car-gauge {
-    @apply w-24 h-24 rounded-full border-6 border-gray-200 overflow-hidden relative mx-auto;
+    @apply w-24 h-24 rounded-full border-4 border-gray-200 overflow-hidden relative mx-auto;
   }
 
   .car-gauge-indicator {
@@ -174,6 +178,36 @@
   }
 }
 
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-5px);
+  }
+  40%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes scan {
+  0% {
+    top: 0%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+@keyframes rotate-car {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
@@ -184,4 +218,16 @@
   100% {
     background-position: 0% 50%;
   }
+}
+
+.animate-scan-line {
+  animation: scan 2s linear infinite;
+}
+
+.animate-rotate-car {
+  animation: rotate-car 4s linear infinite;
+}
+
+.animate-shake {
+  animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
 }

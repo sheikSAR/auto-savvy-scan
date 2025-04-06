@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { getDefectsForImage } from '@/utils/analysisUtils';
 import { AnalysisResult, FullAnalysisResult } from '@/types/analysis';
-import { AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Info } from 'lucide-react';
 
 type ImageViewerProps = {
   currentImage: { id: string; preview: string } | null;
@@ -19,92 +20,125 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
 }) => {
   const [hoveredDefect, setHoveredDefect] = useState<string | null>(null);
 
+  if (!currentImage) return null;
+
+  const defects = selectedImage 
+    ? getDefectsForImage(selectedImage, analysisResult, fullAnalysisResult) 
+    : [];
+
+  const getDefectBoxClasses = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return 'defect-box-high';
+      case 'medium':
+        return 'defect-box-medium';
+      default:
+        return 'defect-box-low';
+    }
+  };
+
+  const getDefectLabelClasses = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return 'bg-red-500 text-white';
+      case 'medium':
+        return 'bg-yellow-500 text-white';
+      default:
+        return 'bg-orange-400 text-white';
+    }
+  };
+
+  const getConfidenceDisplay = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return '90-100%';
+      case 'medium':
+        return '70-89%';
+      default:
+        return '40-69%';
+    }
+  };
+
   return (
-    <div className="rounded-xl overflow-hidden border relative aspect-video shadow-inner bg-gray-100 dark:bg-gray-800">
-      {currentImage ? (
-        <img
-          src={currentImage.preview}
-          alt="Selected car"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-400">No image selected</p>
-        </div>
-      )}
-      
-      {selectedImage &&
-        getDefectsForImage(selectedImage, analysisResult, fullAnalysisResult).map((defect) => {
-          // Calculate bounding box coordinates
-          const getDimensions = () => {
-            if (fullAnalysisResult?.damages?.[defect.type.toLowerCase()]?.coordinates) {
-              // Use coordinates from full analysis if available
-              const coords = fullAnalysisResult.damages[defect.type.toLowerCase()]?.coordinates[0];
-              if (coords) {
-                return {
-                  left: `${coords.x1}%`,
-                  top: `${coords.y1}%`,
-                  width: `${coords.x2 - coords.x1}%`,
-                  height: `${coords.y2 - coords.y1}%`
-                };
-              }
-            }
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+      <div className="relative">
+        <div className="aspect-[4/3] overflow-hidden relative">
+          <img 
+            src={currentImage.preview}
+            alt="Vehicle" 
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Defect highlighting */}
+          {defects.map((defect) => {
+            const isHovered = hoveredDefect === defect.id;
+            const severity = defect.severity || 'low';
             
-            // Fallback to point-based calculation
-            return {
-              left: `${defect.position.x * 100 - 5}%`,
-              top: `${defect.position.y * 100 - 5}%`,
-              width: defect.severity === 'high' ? '10%' : defect.severity === 'medium' ? '8%' : '6%',
-              height: defect.severity === 'high' ? '10%' : defect.severity === 'medium' ? '8%' : '6%'
+            // Calculate position for the bounding box
+            const style = {
+              left: `${defect.position.x * 100 - 10}%`,
+              top: `${defect.position.y * 100 - 10}%`,
+              width: '20%',
+              height: '20%',
+              zIndex: isHovered ? 30 : 20,
+              transform: isHovered ? 'scale(1.05)' : 'scale(1)',
             };
-          };
-          
-          const dimensions = getDimensions();
-          const isHovered = hoveredDefect === defect.id;
-          
-          return (
-            <div
-              key={defect.id}
-              className={`defect-box ${
-                defect.severity === 'high' 
-                  ? 'defect-box-high' 
-                  : defect.severity === 'medium' 
-                    ? 'defect-box-medium' 
-                    : 'defect-box-low'
-              } ${isHovered ? 'z-20 scale-105' : 'z-10'}`}
-              style={{
-                left: dimensions.left,
-                top: dimensions.top,
-                width: dimensions.width,
-                height: dimensions.height
-              }}
-              onMouseEnter={() => setHoveredDefect(defect.id)}
-              onMouseLeave={() => setHoveredDefect(null)}
-              title={defect.description}
-            >
-              {isHovered && (
-                <div className={`defect-label ${
-                  defect.severity === 'high' 
-                    ? 'bg-car-red text-white' 
-                    : defect.severity === 'medium' 
-                      ? 'bg-yellow-500 text-black' 
-                      : 'bg-orange-400 text-black'
-                }`}>
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    <span className="capitalize">{defect.type}</span>
-                    {fullAnalysisResult?.damages?.[defect.type.toLowerCase()]?.damage && (
-                      <span className="ml-1 font-bold">
-                        {fullAnalysisResult.damages[defect.type.toLowerCase()].damage}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })
-      }
+            
+            return (
+              <div
+                key={defect.id}
+                className={`defect-box ${getDefectBoxClasses(severity)}`}
+                style={style}
+                onMouseEnter={() => setHoveredDefect(defect.id)}
+                onMouseLeave={() => setHoveredDefect(null)}
+              >
+                {isHovered && (
+                  <>
+                    <div className={`defect-label ${getDefectLabelClasses(severity)}`}>
+                      {defect.type}
+                    </div>
+                    
+                    <div className="absolute -bottom-16 left-0 bg-black/80 text-white text-xs p-2 rounded shadow-lg z-30 w-48">
+                      <p className="font-semibold mb-1">{defect.type}</p>
+                      <p className="text-xs mb-1">{defect.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-300">Confidence:</span>
+                        <span className="text-xs font-medium">{getConfidenceDisplay(severity)}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Status overlay */}
+        {defects.length > 0 ? (
+          <div className="absolute top-2 left-2">
+            <Badge variant="destructive" className="flex items-center gap-1 py-1 px-2">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>{defects.length} {defects.length === 1 ? 'defect' : 'defects'} detected</span>
+            </Badge>
+          </div>
+        ) : (
+          <div className="absolute top-2 left-2">
+            <Badge variant="default" className="bg-green-500 flex items-center gap-1 py-1 px-2">
+              <Info className="w-3.5 h-3.5" />
+              <span>No defects detected</span>
+            </Badge>
+          </div>
+        )}
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-2">Vehicle Image Analysis</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {defects.length > 0
+            ? "Detected issues are highlighted with colored boxes. Hover over each box to see details."
+            : "No visible defects detected in this image. The vehicle appears to be in good condition."}
+        </p>
+      </div>
     </div>
   );
 };
