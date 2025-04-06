@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageUpload, { UploadedImage } from '@/components/ImageUpload';
 import CarForm, { CarFormData } from '@/components/CarForm';
-import ConditionAnalysis, { AnalysisResult, FullAnalysisResult, Damage } from '@/components/ConditionAnalysis';
+import ConditionAnalysis from '@/components/ConditionAnalysis';
+import { AnalysisResult, FullAnalysisResult, Damage } from '@/types/analysis';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Car, Database, ShieldCheck, Gauge, DollarSign } from 'lucide-react';
