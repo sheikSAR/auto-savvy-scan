@@ -20,6 +20,9 @@ const config: Config = {
       },
     },
     extend: {
+      borderWidth: {
+        '6': '6px',
+      },
       fontFamily: {
         sans: ["Poppins", ...fontFamily.sans],
         poppins: ["Poppins", ...fontFamily.sans],
