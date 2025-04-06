@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, CheckCircle, Info, Car, Shield, DollarSign } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info, Car, Shield, DollarSign, Gauge } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
@@ -217,6 +218,19 @@ const ConditionAnalysis: React.FC<ConditionAnalysisProps> = ({
     return analysisResult?.recommendedPrice || 0;
   };
 
+  // Find the current selected image
+  const getCurrentImage = () => {
+    if (!selectedImage) return null;
+    return images.find(img => img.id === selectedImage);
+  };
+
+  // Get the values needed for display
+  const physicalScore = getPhysicalScore();
+  const legalScore = getLegalScore();
+  const marketValueRange = getMarketValueRange();
+  const recommendedPrice = getRecommendedPrice();
+  const currentImage = getCurrentImage();
+
   return (
     <div className="space-y-8">
       {loading ? (
@@ -243,11 +257,11 @@ const ConditionAnalysis: React.FC<ConditionAnalysisProps> = ({
                   <div 
                     className="car-gauge-indicator bg-blue-500" 
                     style={{ 
-                      height: `${analysisResult.physicalScore}%`,
+                      height: `${physicalScore}%`,
                     }}
                   ></div>
                   <div className="car-gauge-text">
-                    <span className="text-3xl">{analysisResult.physicalScore}%</span>
+                    <span className="text-3xl">{physicalScore}%</span>
                   </div>
                 </div>
               </div>
@@ -256,7 +270,7 @@ const ConditionAnalysis: React.FC<ConditionAnalysisProps> = ({
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200">
               <div className="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white">
                 <div className="flex items-center mb-2">
-                  <ShieldCheck className="w-5 h-5 mr-2" />
+                  <Shield className="w-5 h-5 mr-2" />
                   <h3 className="text-lg font-semibold">Legal Status</h3>
                 </div>
               </div>
@@ -265,11 +279,11 @@ const ConditionAnalysis: React.FC<ConditionAnalysisProps> = ({
                   <div 
                     className="car-gauge-indicator bg-green-500" 
                     style={{ 
-                      height: `${analysisResult.legalScore}%`,
+                      height: `${legalScore}%`,
                     }}
                   ></div>
                   <div className="car-gauge-text">
-                    <span className="text-3xl">{analysisResult.legalScore}%</span>
+                    <span className="text-3xl">{legalScore}%</span>
                   </div>
                 </div>
               </div>
@@ -287,21 +301,21 @@ const ConditionAnalysis: React.FC<ConditionAnalysisProps> = ({
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Recommended Price</p>
                     <p className="text-3xl font-semibold text-purple-600">
-                      ₹{analysisResult.recommendedPrice.toLocaleString('en-IN')}
+                      ₹{typeof recommendedPrice === 'number' ? recommendedPrice.toLocaleString('en-IN') : recommendedPrice}
                     </p>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center border-t pt-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Low</p>
-                      <p className="text-sm font-medium">₹{analysisResult.marketValue.low.toLocaleString('en-IN')}</p>
+                      <p className="text-sm font-medium">₹{typeof marketValueRange.low === 'number' ? marketValueRange.low.toLocaleString('en-IN') : marketValueRange.low}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Average</p>
-                      <p className="text-sm font-medium">₹{analysisResult.marketValue.average.toLocaleString('en-IN')}</p>
+                      <p className="text-sm font-medium">₹{typeof marketValueRange.average === 'number' ? marketValueRange.average.toLocaleString('en-IN') : marketValueRange.average}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">High</p>
-                      <p className="text-sm font-medium">₹{analysisResult.marketValue.high.toLocaleString('en-IN')}</p>
+                      <p className="text-sm font-medium">₹{typeof marketValueRange.high === 'number' ? marketValueRange.high.toLocaleString('en-IN') : marketValueRange.high}</p>
                     </div>
                   </div>
                 </div>
