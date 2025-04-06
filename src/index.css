@@ -5,7 +5,7 @@
  
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 47.4% 11.2%;
  
     --muted: 210 40% 96.1%;
@@ -20,23 +20,23 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
  
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
  
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
  
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 186 100% 38%;
+    --accent-foreground: 210 40% 98%;
  
     --destructive: 0 100% 50%;
     --destructive-foreground: 210 40% 98%;
  
     --ring: 215 20.2% 65.1%;
  
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --car-blue: 210 100% 50%;
+    --car-blue: 217 100% 54%;
   }
  
   .dark {
@@ -55,13 +55,13 @@
     --border: 216 34% 17%;
     --input: 216 34% 17%;
  
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 1.2%;
+    --primary: 217 100% 54%;
+    --primary-foreground: 210 40% 98%;
  
     --secondary: 222.2 47.4% 11.2%;
     --secondary-foreground: 210 40% 98%;
  
-    --accent: 216 34% 17%;
+    --accent: 186 100% 38%;
     --accent-foreground: 210 40% 98%;
  
     --destructive: 0 63% 31%;
@@ -69,7 +69,7 @@
  
     --ring: 216 34% 17%;
  
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
  
@@ -80,61 +80,108 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Poppins', sans-serif;
   }
 }
 
-.car-gauge {
-  width: 100px;
-  height: 100px;
-  border-radius: 50px;
-  border: 6px solid #f0f0f0;
-  overflow: hidden;
-  position: relative;
-  margin: 0 auto;
+@layer components {
+  .car-gauge {
+    @apply w-24 h-24 rounded-full border-6 border-gray-200 overflow-hidden relative mx-auto;
+  }
+
+  .car-gauge-indicator {
+    @apply absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out;
+  }
+
+  .car-gauge-text {
+    @apply absolute inset-0 flex items-center justify-center font-bold text-gray-800 text-shadow-sm dark:text-white;
+  }
+
+  .defect-box {
+    @apply absolute border-2 rounded-md pointer-events-auto cursor-pointer transition-all duration-300;
+  }
+
+  .defect-box-high {
+    @apply border-car-red bg-car-red/20;
+  }
+
+  .defect-box-medium {
+    @apply border-yellow-500 bg-yellow-500/20;
+  }
+
+  .defect-box-low {
+    @apply border-orange-400 bg-orange-400/20;
+  }
+
+  .defect-label {
+    @apply absolute -top-7 left-0 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap shadow-md;
+  }
+
+  .glass-card {
+    @apply bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg border border-white/20 dark:border-white/10 rounded-xl shadow-xl;
+  }
+
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .scan-container {
+    @apply relative overflow-hidden;
+  }
+
+  .scan-line {
+    @apply absolute left-0 right-0 h-2 bg-gradient-to-r from-transparent via-teal-accent to-transparent opacity-80 z-10 pointer-events-none;
+    box-shadow: 0 0 10px 3px theme('colors.teal-accent');
+  }
+
+  .car-3d-container {
+    @apply relative overflow-hidden;
+  }
 }
 
-.car-gauge-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transition: height 1s ease-out;
+.rotating-car {
+  animation: rotation 10s infinite linear;
+  transform-style: preserve-3d;
 }
 
-.car-gauge-text {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: #333;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-}
-
-.image-annotation {
-  position: absolute;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(255, 0, 0, 0.5);
-  border: 2px solid white;
-  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.5);
-  cursor: pointer;
-  z-index: 10;
-  animation: pulse 1.5s infinite;
+@keyframes rotation {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+    box-shadow: 0 0 0 0 rgba(23, 119, 255, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(255, 0, 0, 0);
+    box-shadow: 0 0 0 8px rgba(23, 119, 255, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    box-shadow: 0 0 0 0 rgba(23, 119, 255, 0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
