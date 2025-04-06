@@ -2,21 +2,13 @@
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUpload, { UploadedImage } from '@/components/ImageUpload';
 import CarForm, { CarFormData } from '@/components/CarForm';
-import ConditionAnalysis, { AnalysisResult } from '@/components/ConditionAnalysis';
+import ConditionAnalysis, { AnalysisResult, FullAnalysisResult } from '@/components/ConditionAnalysis';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Car, Database, ShieldCheck, Gauge, DollarSign } from 'lucide-react';
-
-type UploadedImage = {
-  id: string;
-  file: File;
-  preview: string;
-  uploading?: boolean;
-  progress?: number;
-  error?: string;
-};
+import { uploadImageForFullAnalysis } from '@/services/api';
 
 // Mock data for demonstration purposes
 const mockAnalysisResult: AnalysisResult = {
@@ -62,7 +54,9 @@ const mockAnalysisResult: AnalysisResult = {
 const Index: React.FC = () => {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [carFormData, setCarFormData] = useState<CarFormData | null>(null);
+  const [initialCarData, setInitialCarData] = useState<Partial<CarFormData> | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | undefined>(undefined);
+  const [fullAnalysisResult, setFullAnalysisResult] = useState<FullAnalysisResult | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(1);
   const { toast } = useToast();
@@ -76,44 +70,131 @@ const Index: React.FC = () => {
     }
   };
 
-  const handleCarFormSubmit = (data: CarFormData) => {
+  const handleCarFormSubmit = async (data: CarFormData) => {
     setCarFormData(data);
     setStep(3);
     
-    // Simulate API call to analyze car
+    // Start loading
     setLoading(true);
     
-    // For demo purposes, we'll use a timeout to simulate loading
-    setTimeout(() => {
-      // Assign imageIds to the mock data to match uploaded images
-      const modifiedResult = { ...mockAnalysisResult };
-      
-      // Map the defects to the actual uploaded images
+    try {
+      // Use the first image for analysis
       if (images.length > 0) {
-        modifiedResult.defects = modifiedResult.defects.map((defect, index) => {
-          // Distribute defects among available images
-          const imageIndex = index % images.length;
-          return {
-            ...defect,
-            imageId: images[imageIndex].id,
+        // Call backend API for full analysis
+        const response = await uploadImageForFullAnalysis(images[0].file, data);
+        
+        if (response.status === 'success') {
+          setFullAnalysisResult(response.data);
+          
+          // To handle backward compatibility, also populate the old analysisResult format
+          const legalIssues: string[] = [];
+          
+          if (response.data.legal_status.insurance.status === 'invalid') {
+            legalIssues.push(`Insurance expired on ${response.data.legal_status.insurance.expiry_date}`);
+          }
+          
+          response.data.legal_status.challans
+            .filter(challan => challan.status === 'unpaid')
+            .forEach(challan => {
+              legalIssues.push(`Unpaid challan: ${challan.fine_amount} from ${challan.date}`);
+            });
+          
+          // Construct defects from damage data
+          const defects = [];
+          if (response.data.damages) {
+            Object.entries(response.data.damages).forEach(([type, damage]) => {
+              if (damage) {
+                damage.coordinates.forEach((coord, index) => {
+                  const centerX = (coord.x1 + coord.x2) / 2 / 100;
+                  const centerY = (coord.y1 + coord.y2) / 2 / 100;
+                  
+                  defects.push({
+                    id: `${type}-${index}`,
+                    type,
+                    severity: damage.type === 'major' ? 'high' : 'low',
+                    description: damage.description,
+                    position: { x: centerX, y: centerY },
+                    imageId: images[0].id,
+                  });
+                });
+              }
+            });
+          }
+          
+          // Parse market values to integers for calculation
+          const parsePrice = (price: string) => {
+            return parseInt(price.replace(/[^0-9]/g, '')) || 0;
           };
+          
+          setAnalysisResult({
+            physicalScore: response.data.physical_condition,
+            legalScore: response.data.legal_status.percentage,
+            marketValue: {
+              low: parsePrice(response.data.market_value_range.low_price),
+              average: parsePrice(response.data.market_value_range.average_price),
+              high: parsePrice(response.data.market_value_range.high_price),
+            },
+            recommendedPrice: parsePrice(response.data.market_value_range.recommended_price),
+            defects,
+            legalIssues,
+          });
+          
+          toast({
+            title: "Analysis Complete",
+            description: "Your vehicle analysis report is ready to view.",
+          });
+        } else {
+          throw new Error("Failed to analyze vehicle");
+        }
+      } else {
+        // Fallback to mock data if no images
+        setAnalysisResult(mockAnalysisResult);
+        
+        toast({
+          title: "Using Demo Data",
+          description: "No images provided, showing demo analysis.",
+          variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error('Analysis error:', error);
       
-      setAnalysisResult(modifiedResult);
-      setLoading(false);
+      // Fallback to mock data
+      setAnalysisResult(mockAnalysisResult);
       
       toast({
-        title: "Analysis Complete",
-        description: "Your vehicle analysis report is ready to view.",
+        title: "Analysis Error",
+        description: "Failed to analyze vehicle. Using demo data instead.",
+        variant: "destructive",
       });
-    }, 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCarDetailsDetected = (carData: any) => {
+    if (!carData) return;
+    
+    const mappedData: Partial<CarFormData> = {};
+    
+    // Map detected values to form fields
+    if (carData.make) mappedData.make = carData.make;
+    if (carData.model) mappedData.model = carData.model;
+    if (carData.color) mappedData.color = carData.color;
+    if (carData.fuel_type) mappedData.fuelType = carData.fuel_type;
+    if (carData.transmission) mappedData.transmission = carData.transmission;
+    if (carData.number_plate) mappedData.numberPlate = carData.number_plate;
+    
+    // Set initial car data for form
+    setInitialCarData(mappedData);
   };
 
   const resetAnalysis = () => {
     setImages([]);
     setCarFormData(null);
+    setInitialCarData(null);
     setAnalysisResult(undefined);
+    setFullAnalysisResult(undefined);
     setStep(1);
   };
 
@@ -128,12 +209,16 @@ const Index: React.FC = () => {
             <div className="container mx-auto px-4">
               <div className="max-w-3xl mx-auto text-center">
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                  Make Smart Used Car Buying Decisions with AI
+                  <span className="text-car-blue">KARE</span> V-Analyser: Smart Used Car Analysis
                 </h1>
                 <p className="text-xl text-gray-600 mb-8">
                   Upload car images and get instant AI analysis on condition, legal status, and fair pricing.
                 </p>
-                <Button size="lg" className="bg-car-blue hover:bg-car-blue/90 text-white" onClick={() => window.scrollTo(0, document.getElementById('analysis-section')?.offsetTop || 0)}>
+                <Button 
+                  size="lg" 
+                  className="bg-car-blue hover:bg-car-blue/90 text-white shadow-lg hover:shadow-xl transition-all" 
+                  onClick={() => window.scrollTo(0, document.getElementById('analysis-section')?.offsetTop || 0)}
+                >
                   Start Your Analysis
                 </Button>
               </div>
@@ -149,7 +234,7 @@ const Index: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="flex flex-col items-center text-center">
-                  <div className="bg-blue-50 rounded-full p-4 mb-4">
+                  <div className="bg-blue-50 rounded-full p-4 mb-4 shadow-md">
                     <Car className="w-8 h-8 text-car-blue" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Upload Car Images</h3>
@@ -157,7 +242,7 @@ const Index: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col items-center text-center">
-                  <div className="bg-blue-50 rounded-full p-4 mb-4">
+                  <div className="bg-blue-50 rounded-full p-4 mb-4 shadow-md">
                     <Database className="w-8 h-8 text-car-blue" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Enter Car Details</h3>
@@ -165,7 +250,7 @@ const Index: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col items-center text-center">
-                  <div className="bg-blue-50 rounded-full p-4 mb-4">
+                  <div className="bg-blue-50 rounded-full p-4 mb-4 shadow-md">
                     <ShieldCheck className="w-8 h-8 text-car-blue" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">AI Analysis</h3>
@@ -173,7 +258,7 @@ const Index: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col items-center text-center">
-                  <div className="bg-blue-50 rounded-full p-4 mb-4">
+                  <div className="bg-blue-50 rounded-full p-4 mb-4 shadow-md">
                     <DollarSign className="w-8 h-8 text-car-blue" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Get Price Insights</h3>
@@ -192,7 +277,7 @@ const Index: React.FC = () => {
               <div className="mb-8">
                 <div className="flex items-center justify-between max-w-3xl mx-auto">
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 1 ? 'bg-car-blue text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 1 ? 'bg-car-blue text-white shadow-lg' : 'bg-gray-200 text-gray-500'}`}>
                       1
                     </div>
                     <span className="text-sm font-medium">Upload Images</span>
@@ -201,7 +286,7 @@ const Index: React.FC = () => {
                   <div className={`flex-1 h-1 mx-2 ${step >= 2 ? 'bg-car-blue' : 'bg-gray-200'}`} />
                   
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 2 ? 'bg-car-blue text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 2 ? 'bg-car-blue text-white shadow-lg' : 'bg-gray-200 text-gray-500'}`}>
                       2
                     </div>
                     <span className="text-sm font-medium">Car Details</span>
@@ -210,7 +295,7 @@ const Index: React.FC = () => {
                   <div className={`flex-1 h-1 mx-2 ${step >= 3 ? 'bg-car-blue' : 'bg-gray-200'}`} />
                   
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 3 ? 'bg-car-blue text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${step >= 3 ? 'bg-car-blue text-white shadow-lg' : 'bg-gray-200 text-gray-500'}`}>
                       3
                     </div>
                     <span className="text-sm font-medium">Analysis Results</span>
@@ -220,13 +305,16 @@ const Index: React.FC = () => {
 
               {/* Step 1: Image Upload */}
               {step === 1 && (
-                <div className="bg-white rounded-lg shadow-md p-6 animate-fade-in">
-                  <h2 className="text-2xl font-bold mb-6">Upload Car Images</h2>
+                <div className="bg-white rounded-lg shadow-xl p-6 animate-fade-in border border-gray-200">
+                  <h2 className="text-2xl font-bold mb-6 text-car-blue">Upload Car Images</h2>
                   <p className="text-gray-600 mb-6">
                     Upload clear, well-lit photos of the car from different angles for the best analysis results.
                     Include exterior shots, interior, engine bay, and any areas with visible damage.
                   </p>
-                  <ImageUpload onImagesUploaded={handleImagesUploaded} />
+                  <ImageUpload 
+                    onImagesUploaded={handleImagesUploaded} 
+                    onCarDetailsDetected={handleCarDetailsDetected}
+                  />
                 </div>
               )}
 
@@ -234,12 +322,15 @@ const Index: React.FC = () => {
               {step === 2 && (
                 <div className="animate-fade-in">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Car Details</h2>
+                    <h2 className="text-2xl font-bold text-car-blue">Car Details</h2>
                     <Button variant="outline" size="sm" onClick={() => setStep(1)}>
                       Back to Images
                     </Button>
                   </div>
-                  <CarForm onSubmit={handleCarFormSubmit} />
+                  <CarForm 
+                    onSubmit={handleCarFormSubmit}
+                    initialData={initialCarData || undefined}
+                  />
                 </div>
               )}
 
@@ -247,7 +338,7 @@ const Index: React.FC = () => {
               {step === 3 && (
                 <div className="animate-fade-in">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Analysis Results</h2>
+                    <h2 className="text-2xl font-bold text-car-blue">Analysis Results</h2>
                     <Button variant="outline" size="sm" onClick={resetAnalysis}>
                       Start New Analysis
                     </Button>
@@ -255,6 +346,7 @@ const Index: React.FC = () => {
                   <ConditionAnalysis 
                     images={images} 
                     analysisResult={analysisResult} 
+                    fullAnalysisResult={fullAnalysisResult}
                     loading={loading} 
                   />
                 </div>
@@ -270,10 +362,10 @@ const Index: React.FC = () => {
               <h2 className="text-3xl font-bold text-center mb-12">What Users Say</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
+                <div className="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex items-center mb-4">
                     <div className="mr-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-300"></div>
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-car-blue">RS</div>
                     </div>
                     <div>
                       <h4 className="font-medium">Rahul Sharma</h4>
@@ -285,10 +377,10 @@ const Index: React.FC = () => {
                   </p>
                 </div>
                 
-                <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
+                <div className="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex items-center mb-4">
                     <div className="mr-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-300"></div>
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-car-blue">PP</div>
                     </div>
                     <div>
                       <h4 className="font-medium">Priya Patel</h4>
@@ -300,10 +392,10 @@ const Index: React.FC = () => {
                   </p>
                 </div>
                 
-                <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
+                <div className="bg-gray-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex items-center mb-4">
                     <div className="mr-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-300"></div>
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-car-blue">AG</div>
                     </div>
                     <div>
                       <h4 className="font-medium">Arun Gupta</h4>

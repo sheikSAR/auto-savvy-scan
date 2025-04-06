@@ -9,7 +9,9 @@ const Header: React.FC = () => {
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2">
           <Car className="w-8 h-8 text-car-blue" />
-          <h1 className="text-xl font-bold">Vehicle Condition Analyser</h1>
+          <h1 className="text-xl font-bold">
+            <span className="text-car-blue">KARE</span> V-Analyser
+          </h1>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#" className="text-sm font-medium hover:text-car-blue transition-colors">How it works</a>

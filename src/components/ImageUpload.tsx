@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
+import { uploadImageForCarDetails } from '@/services/api';
 
-type UploadedImage = {
+export type UploadedImage = {
   id: string;
   file: File;
   preview: string;
@@ -15,9 +16,15 @@ type UploadedImage = {
   error?: string;
 };
 
-const ImageUpload: React.FC<{
+type ImageUploadProps = {
   onImagesUploaded: (images: UploadedImage[]) => void;
-}> = ({ onImagesUploaded }) => {
+  onCarDetailsDetected?: (carDetails: any) => void;
+};
+
+const ImageUpload: React.FC<ImageUploadProps> = ({ 
+  onImagesUploaded, 
+  onCarDetailsDetected 
+}) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
@@ -39,7 +46,7 @@ const ImageUpload: React.FC<{
     e.stopPropagation();
   }, []);
 
-  const processFiles = useCallback((files: FileList | null) => {
+  const processFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
 
     const validFiles: UploadedImage[] = [];
@@ -47,13 +54,14 @@ const ImageUpload: React.FC<{
 
     Array.from(files).forEach((file) => {
       if (file.type.startsWith('image/')) {
-        validFiles.push({
+        const newImage = {
           id: Math.random().toString(36).substring(2, 9),
           file,
           preview: URL.createObjectURL(file),
-          uploading: false,
+          uploading: true,
           progress: 0,
-        });
+        };
+        validFiles.push(newImage);
       } else {
         invalidFiles.push(file.name);
       }
@@ -68,13 +76,34 @@ const ImageUpload: React.FC<{
     }
 
     if (validFiles.length > 0) {
-      setImages((prev) => [...prev, ...validFiles]);
-      // Simulate upload process
-      simulateUpload(validFiles);
+      const updatedImages = [...images, ...validFiles];
+      setImages(updatedImages);
+      
+      // If this is the first image, try to detect car details
+      if (images.length === 0 && onCarDetailsDetected) {
+        try {
+          simulateUpload(validFiles, async (uploadedImage) => {
+            // Call the backend API to detect car details
+            const response = await uploadImageForCarDetails(uploadedImage.file);
+            if (response.status === 'success' && response.data) {
+              onCarDetailsDetected(response.data);
+              toast({
+                title: "Car details detected",
+                description: "We've automatically filled some car details based on the image.",
+              });
+            }
+          });
+        } catch (error) {
+          console.error('Error detecting car details:', error);
+          simulateUpload(validFiles);
+        }
+      } else {
+        simulateUpload(validFiles);
+      }
     }
-  }, [toast]);
+  }, [images, toast, onCarDetailsDetected]);
 
-  const simulateUpload = (newImages: UploadedImage[]) => {
+  const simulateUpload = (newImages: UploadedImage[], onComplete?: (image: UploadedImage) => void) => {
     const updatedImages = [...images];
     
     newImages.forEach((image) => {
@@ -105,6 +134,10 @@ const ImageUpload: React.FC<{
             onImagesUploaded(updated);
             return updated;
           });
+          
+          if (onComplete) {
+            onComplete(image);
+          }
         } else {
           setImages((prev) => 
             prev.map((img) => 
@@ -145,7 +178,7 @@ const ImageUpload: React.FC<{
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center justify-center text-center">
-          <Upload className="w-12 h-12 text-gray-400 mb-2" />
+          <Upload className="w-12 h-12 text-car-blue mb-2" />
           <h3 className="text-lg font-medium mb-1">Drag & drop your car images here</h3>
           <p className="text-sm text-gray-500 mb-4">or click to browse from your device</p>
           <input
@@ -156,7 +189,7 @@ const ImageUpload: React.FC<{
             id="image-upload"
             onChange={handleFileInputChange}
           />
-          <Button asChild>
+          <Button asChild className="bg-car-blue hover:bg-car-blue/90">
             <label htmlFor="image-upload" className="cursor-pointer">
               <ImagePlus className="w-4 h-4 mr-2" />
               Select Images
@@ -168,7 +201,7 @@ const ImageUpload: React.FC<{
       {images.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {images.map((image) => (
-            <Card key={image.id} className="overflow-hidden">
+            <Card key={image.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow">
               <div className="relative aspect-square bg-gray-100">
                 <img
                   src={image.preview}
