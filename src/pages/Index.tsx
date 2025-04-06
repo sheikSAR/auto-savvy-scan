@@ -334,7 +334,6 @@ const Index: React.FC = () => {
           id="analysis-section"
           className="py-16 bg-gray-50 dark:bg-gray-800/50 relative"
         >
-          <div className="absolute inset-0 bg-tech-pattern opacity-5"></div>
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
               {/* Progress Steps */}
